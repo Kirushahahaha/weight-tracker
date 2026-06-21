@@ -598,6 +598,58 @@ body {
   border-radius: 10px !important;
 }
 
+/* ─── Barcode ─── */
+.input-with-barcode { display: flex; gap: 8px; align-items: flex-start; }
+
+.barcode-btn {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--navy);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.barcode-btn:hover { background: var(--surface3); }
+
+.barcode-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.barcode-modal {
+  width: 100%; max-width: 420px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.barcode-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 0.9rem;
+}
+.barcode-view { width: 100%; }
+.barcode-view video { width: 100% !important; }
+.barcode-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 48px;
+  color: var(--text2);
+}
+.barcode-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
   .app { padding: 0 16px 60px; }

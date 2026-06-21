@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import BarcodeScanner from './BarcodeScanner';
 
 const LOCAL_DB = [
   { name: 'Гречка варёная', kcal_per_100: 92, protein_per_100: 3.4, fat_per_100: 0.6, carbs_per_100: 19.9 },
@@ -67,6 +68,7 @@ export default function FoodSearch({ onAdd, selectedDate }) {
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
   const [grams, setGrams] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
@@ -77,10 +79,7 @@ export default function FoodSearch({ onAdd, selectedDate }) {
     if (q.length < 2) { setResults([]); setApiStatus(''); return; }
 
     const local = searchLocal(q);
-    if (local.length > 0) {
-      setResults(local);
-      setApiStatus('');
-    }
+    if (local.length > 0) { setResults(local); setApiStatus(''); }
 
     timerRef.current = setTimeout(async () => {
       setLoading(true);
@@ -89,9 +88,7 @@ export default function FoodSearch({ onAdd, selectedDate }) {
         if (api.length > 0) {
           const merged = [...local];
           api.forEach(a => {
-            if (!merged.find(l => l.name.toLowerCase() === a.name.toLowerCase())) {
-              merged.push(a);
-            }
+            if (!merged.find(l => l.name.toLowerCase() === a.name.toLowerCase())) merged.push(a);
           });
           setResults(merged.slice(0, 10));
           setApiStatus('');
@@ -99,9 +96,7 @@ export default function FoodSearch({ onAdd, selectedDate }) {
           setApiStatus('Не найдено. Попробуйте на английском.');
         }
       } catch {
-        if (local.length === 0) {
-          setApiStatus('Нет интернета — используется локальная база');
-        }
+        if (local.length === 0) setApiStatus('Нет интернета — используется локальная база');
       } finally {
         setLoading(false);
       }
@@ -121,17 +116,26 @@ export default function FoodSearch({ onAdd, selectedDate }) {
     setQuery(product.name);
   };
 
+  const handleBarcodeResult = (product) => {
+    setShowScanner(false);
+    setSelected({
+      name: product.name,
+      kcal_per_100: product.kcal,
+      protein_per_100: product.protein,
+      fat_per_100: product.fat,
+      carbs_per_100: product.carbs,
+    });
+    setQuery(product.name);
+    setResults([]);
+    setError('');
+  };
+
   const handleAdd = () => {
     if (!selected) { setError('Выберите продукт из списка'); return; }
     const g = parseFloat(grams);
     if (!g || g <= 0 || g > 5000) { setError('Введите корректные граммы'); return; }
     onAdd(selected, g, selectedDate);
-    setQuery('');
-    setGrams('');
-    setSelected(null);
-    setResults([]);
-    setError('');
-    setApiStatus('');
+    setQuery(''); setGrams(''); setSelected(null); setResults([]); setError(''); setApiStatus('');
   };
 
   const kcalPreview = selected
@@ -145,18 +149,26 @@ export default function FoodSearch({ onAdd, selectedDate }) {
       <div className="food-search-wrap">
         <div className="field search-field">
           <label>Поиск продукта</label>
-          <div className="input-with-hint">
-            <input
-              type="text"
-              value={query}
-              onChange={handleQueryChange}
-              placeholder="Например: гречка, курица, яблоко..."
-              autoComplete="off"
-            />
-            {loading && <span className="spin" />}
+          <div className="input-with-barcode">
+            <div className="input-with-hint" style={{ flex: 1 }}>
+              <input
+                type="text"
+                value={query}
+                onChange={handleQueryChange}
+                placeholder="Например: гречка, курица, яблоко..."
+                autoComplete="off"
+              />
+              {loading && <span className="spin" />}
+            </div>
+            <button className="barcode-btn" onClick={() => setShowScanner(true)} title="Сканировать штрихкод">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
+                <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
+                <line x1="13" y1="8" x2="13" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/>
+              </svg>
+            </button>
           </div>
           {apiStatus && <span className="api-status">{apiStatus}</span>}
-
           {results.length > 0 && (
             <ul className="search-results">
               {results.map((r, i) => (
@@ -171,23 +183,15 @@ export default function FoodSearch({ onAdd, selectedDate }) {
 
         <div className="field grams-field">
           <label>Граммы</label>
-          <input
-            type="number"
-            min="1"
-            max="5000"
-            value={grams}
-            placeholder="г"
-            onChange={e => setGrams(e.target.value)}
-          />
+          <input type="number" min="1" max="5000" value={grams} placeholder="г"
+            onChange={e => setGrams(e.target.value)} />
         </div>
 
         <div className="add-btn-wrap">
           {kcalPreview !== null && grams && (
             <span className="kcal-preview">{kcalPreview} ккал</span>
           )}
-          <button className="btn-primary" onClick={handleAdd}>
-            Добавить
-          </button>
+          <button className="btn-primary" onClick={handleAdd}>Добавить</button>
         </div>
       </div>
 
@@ -200,6 +204,13 @@ export default function FoodSearch({ onAdd, selectedDate }) {
       )}
 
       {error && <p className="error">{error}</p>}
+
+      {showScanner && (
+        <BarcodeScanner
+          onResult={handleBarcodeResult}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }
