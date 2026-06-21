@@ -1,48 +1,45 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 export default function BarcodeScanner({ onResult, onClose }) {
-  const [error, setError] = useState('');
+  const videoRef = useRef(null);
+  const readerRef = useRef(null);
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
-  const scannerRef = useRef(null);
-  const divId = 'barcode-reader';
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(divId);
-    scannerRef.current = scanner;
+    const reader = new BrowserMultiFormatReader();
+    readerRef.current = reader;
 
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 } },
-      async (code) => {
-        scanner.stop();
-        setLoading(true);
-        try {
-          const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-          const data = await res.json();
-          if (data.status === 1) {
-            const p = data.product;
-            const n = p.nutriments;
-            onResult({
-              name: p.product_name || p.product_name_ru || 'Неизвестный продукт',
-              kcal:    Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || 0),
-              protein: Math.round((n.proteins_100g || 0) * 10) / 10,
-              fat:     Math.round((n.fat_100g || 0) * 10) / 10,
-              carbs:   Math.round((n.carbohydrates_100g || 0) * 10) / 10,
-            });
-          } else {
-            setError('Продукт не найден в базе');
-            setLoading(false);
-          }
-        } catch {
-          setError('Ошибка подключения');
+    reader.decodeFromVideoDevice(null, videoRef.current, async (result, err) => {
+      if (!result) return;
+      reader.reset();
+      setLoading(true);
+      try {
+        const code = result.getText();
+        const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+        const data = await res.json();
+        if (data.status === 1) {
+          const p = data.product;
+          const n = p.nutriments;
+          onResult({
+            name:    p.product_name || p.product_name_ru || 'Неизвестный продукт',
+            kcal:    Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || 0),
+            protein: Math.round((n.proteins_100g    || 0) * 10) / 10,
+            fat:     Math.round((n.fat_100g         || 0) * 10) / 10,
+            carbs:   Math.round((n.carbohydrates_100g || 0) * 10) / 10,
+          });
+        } else {
+          setError('Продукт не найден в базе');
           setLoading(false);
         }
-      },
-      () => {}
-    ).catch(() => setError('Нет доступа к камере'));
+      } catch {
+        setError('Ошибка подключения');
+        setLoading(false);
+      }
+    }).catch(() => setError('Нет доступа к камере'));
 
-    return () => { scanner.stop().catch(() => {}); };
+    return () => { try { reader.reset(); } catch {} };
   }, [onResult]);
 
   return (
@@ -59,7 +56,10 @@ export default function BarcodeScanner({ onResult, onClose }) {
             <p>Ищем продукт...</p>
           </div>
         ) : (
-          <div id={divId} className="barcode-view" />
+          <div className="barcode-video-wrap">
+            <video ref={videoRef} className="barcode-video" autoPlay muted playsInline />
+            <div className="barcode-aim" />
+          </div>
         )}
 
         {error && <p className="error" style={{ padding: '12px 16px' }}>{error}</p>}
