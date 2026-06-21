@@ -634,28 +634,24 @@ body {
   color: var(--text2);
   font-size: 0.9rem;
 }
-.barcode-video-wrap {
-  position: relative;
-  width: 100%;
-  background: #000;
-  overflow: hidden;
-  aspect-ratio: 4/3;
+.barcode-photo-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  gap: 16px;
 }
-.barcode-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.barcode-icon { opacity: 0.7; }
+.barcode-hint {
+  color: var(--text2);
+  font-size: 0.9rem;
+  text-align: center;
 }
-.barcode-aim {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 220px; height: 100px;
-  border: 2px solid rgba(177,191,226,0.8);
-  border-radius: 8px;
-  box-shadow: 0 0 0 2000px rgba(0,0,0,0.35);
-  pointer-events: none;
+.barcode-photo-btn {
+  width: 100%;
+  max-width: 260px;
+  font-size: 1rem;
+  padding: 14px;
 }
 .barcode-loading {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
