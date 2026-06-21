@@ -48,28 +48,30 @@ export default function WeightForm({ onAdd, entries }) {
   return (
     <div className="card">
       <h2>Взвешивание</h2>
-      <form onSubmit={handleSubmit} className="form-row">
-        <div className="field">
-          <label>Вес (кг)</label>
-          <input type="number" step="0.1" min="1" max="500" value={weight}
-            onChange={e => setWeight(e.target.value)} placeholder="75.5" />
-        </div>
-        <div className="field">
-          <label>Дата</label>
-          <div className="date-fields">
-            <input type="number" className="date-part" placeholder="ДД" min="1" max="31" value={day}
-              onChange={e => { const v = e.target.value.slice(0,2); setDay(v); if (v.length === 2) monthRef.current?.focus(); }} />
-            <span className="date-sep">/</span>
-            <input type="number" className="date-part" placeholder="ММ" min="1" max="12" value={month}
-              ref={el => monthRef.current = el}
-              onChange={e => { const v = e.target.value.slice(0,2); setMonth(v); if (v.length === 2) yearRef.current?.focus(); }} />
-            <span className="date-sep">/</span>
-            <input type="number" className="date-part date-year" placeholder="ГГ" min="0" max="99" value={year}
-              ref={el => yearRef.current = el}
-              onChange={e => setYear(e.target.value.slice(0,2))} />
+      <form onSubmit={handleSubmit}>
+        <div className="form-row">
+          <div className="field">
+            <label>Вес (кг)</label>
+            <input type="number" step="0.1" min="1" max="500" value={weight}
+              onChange={e => setWeight(e.target.value)} placeholder="75.5" />
+          </div>
+          <div className="field">
+            <label>Дата</label>
+            <div className="date-fields">
+              <input type="number" className="date-part" placeholder="ДД" min="1" max="31" value={day}
+                onChange={e => { const v = e.target.value.slice(0,2); setDay(v); if (v.length === 2) monthRef.current?.focus(); }} />
+              <span className="date-sep">/</span>
+              <input type="number" className="date-part" placeholder="ММ" min="1" max="12" value={month}
+                ref={el => monthRef.current = el}
+                onChange={e => { const v = e.target.value.slice(0,2); setMonth(v); if (v.length === 2) yearRef.current?.focus(); }} />
+              <span className="date-sep">/</span>
+              <input type="number" className="date-part date-year" placeholder="ГГ" min="0" max="99" value={year}
+                ref={el => yearRef.current = el}
+                onChange={e => setYear(e.target.value.slice(0,2))} />
+            </div>
           </div>
         </div>
-        <button type="submit" className="btn-primary">Добавить</button>
+        <button type="submit" className="btn-primary" style={{ marginTop: 12, width: '100%' }}>Добавить</button>
       </form>
       {error && <p className="error">{error}</p>}
     </div>

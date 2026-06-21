@@ -669,15 +669,36 @@ body {
 
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
-  .app { padding: 0 16px 60px; }
-  .app-header { flex-direction: column; align-items: flex-start; gap: 16px; padding: 36px 0 28px; }
-  .header-right { text-align: left; }
-  .app-header h1 { font-size: 2.4rem; }
+  .app { padding: 0 14px 80px; }
+  .app-header { flex-direction: row; align-items: center; padding: 28px 0 20px; }
+  .app-header h1 { font-size: 1.8rem; }
+
   .grid-top, .grid-bottom { grid-template-columns: 1fr; gap: 10px; }
-  .form-row { flex-direction: column; }
-  .stats-row { gap: 20px; }
-  .stat-value { font-size: 1.8rem; }
-  .food-search-wrap { flex-direction: column; }
-  .grams-field { max-width: 100%; }
-  .add-btn-wrap { padding-top: 0; flex-direction: row; justify-content: space-between; width: 100%; align-items: center; }
+
+  /* Forms */
+  .form-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .field { min-width: unset; width: 100%; }
+  .btn-primary { width: 100%; }
+
+  /* Nutrition */
+  .food-search-wrap { flex-direction: column; gap: 12px; }
+  .search-field { min-width: unset; width: 100%; }
+  .grams-field { max-width: 100%; width: 100%; }
+  .add-btn-wrap { flex-direction: row; justify-content: space-between; align-items: center; padding-top: 0; }
+  .add-btn-wrap .btn-primary { width: auto; flex: 1; }
+
+  /* Whoop ring */
+  .whoop-layout { gap: 20px; }
+  .whoop-stats { gap: 8px; }
+
+  /* Tables */
+  .history-table { font-size: 0.82rem; }
+  .history-table th, .history-table td { padding: 10px 8px; }
+
+  /* Tabs */
+  .tab { padding: 12px 16px; font-size: 0.85rem; }
+  .tab-num { font-size: 0.7rem; }
+
+  /* Card */
+  .card { padding: 18px 16px; }
 }
