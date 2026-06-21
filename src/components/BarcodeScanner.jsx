@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
 
 async function fetchProduct(code) {
   const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
@@ -18,26 +17,17 @@ async function fetchProduct(code) {
 
 export default function BarcodeScanner({ onResult, onClose }) {
   const inputRef = useRef(null);
-  const [status, setStatus] = useState('idle'); // idle | loading | error
+  const [status, setStatus] = useState('idle');
   const [error, setError]   = useState('');
+  const [manual, setManual] = useState('');
 
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const lookup = async (code) => {
+    const clean = code.trim();
+    if (!clean) return;
     setStatus('loading');
     setError('');
     try {
-      const img = await createImageBitmap(file);
-      const canvas = document.createElement('canvas');
-      canvas.width  = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-
-      const reader = new BrowserMultiFormatReader();
-      const result = await reader.decodeFromCanvas(canvas);
-      const code   = result.getText();
-
-      const product = await fetchProduct(code);
+      const product = await fetchProduct(clean);
       if (product) {
         onResult(product);
       } else {
@@ -46,7 +36,29 @@ export default function BarcodeScanner({ onResult, onClose }) {
       }
     } catch {
       setStatus('error');
-      setError('Штрихкод не распознан. Сфотографируй чётче при хорошем освещении.');
+      setError('Ошибка подключения к интернету.');
+    }
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setStatus('loading');
+    setError('');
+
+    try {
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      const img    = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const reader = new BrowserMultiFormatReader();
+      const result = await reader.decodeFromCanvas(canvas);
+      await lookup(result.getText());
+    } catch {
+      setStatus('error');
+      setError('Не удалось распознать. Введи номер штрихкода вручную.');
     }
     e.target.value = '';
   };
@@ -55,7 +67,7 @@ export default function BarcodeScanner({ onResult, onClose }) {
     <div className="barcode-overlay">
       <div className="barcode-modal">
         <div className="barcode-header">
-          <span>Сканер штрихкода</span>
+          <span>Поиск по штрихкоду</span>
           <button className="btn-delete" onClick={onClose}>✕</button>
         </div>
 
@@ -68,33 +80,35 @@ export default function BarcodeScanner({ onResult, onClose }) {
           ) : (
             <>
               <div className="barcode-icon">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B1BFE2" strokeWidth="1.2">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#B1BFE2" strokeWidth="1.2">
                   <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
                   <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
                   <line x1="13" y1="8" x2="13" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/>
                 </svg>
               </div>
-              <p className="barcode-hint">Сфотографируй штрихкод на упаковке</p>
-              <button className="btn-primary barcode-photo-btn" onClick={() => inputRef.current?.click()}>
-                📷 Открыть камеру
-              </button>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style={{ display: 'none' }}
-                onChange={handleFile}
-              />
-            </>
-          )}
 
-          {status === 'error' && (
-            <>
-              <p className="error" style={{ textAlign: 'center', marginTop: 12 }}>{error}</p>
-              <button className="btn-primary barcode-photo-btn" style={{ marginTop: 8 }} onClick={() => { setStatus('idle'); setError(''); inputRef.current?.click(); }}>
-                Попробовать снова
+              <button className="btn-primary barcode-photo-btn" onClick={() => inputRef.current?.click()}>
+                📷 Сфотографировать штрихкод
               </button>
+              <input ref={inputRef} type="file" accept="image/*" capture="environment"
+                style={{ display: 'none' }} onChange={handleFile} />
+
+              <p className="barcode-or">или введи номер вручную</p>
+
+              <div className="barcode-manual">
+                <input
+                  type="number"
+                  value={manual}
+                  onChange={e => setManual(e.target.value)}
+                  placeholder="4600000000000"
+                  onKeyDown={e => e.key === 'Enter' && lookup(manual)}
+                />
+                <button className="btn-primary" onClick={() => lookup(manual)}>→</button>
+              </div>
+
+              {(status === 'error') && (
+                <p className="error" style={{ textAlign: 'center', marginTop: 4 }}>{error}</p>
+              )}
             </>
           )}
         </div>
