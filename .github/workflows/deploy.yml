@@ -19,6 +19,7 @@ jobs:
       - run: npm run build
         env:
           GENERATE_SOURCEMAP: false
+          CI: false
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
