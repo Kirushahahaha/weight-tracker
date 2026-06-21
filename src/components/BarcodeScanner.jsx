@@ -51,7 +51,7 @@ export default function BarcodeScanner({ onResult, onClose }) {
     }
   };
 
-  useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
     if (mode !== 'camera') return;
 
     let cancelled = false;
@@ -110,7 +110,7 @@ export default function BarcodeScanner({ onResult, onClose }) {
 
     start();
     return () => { cancelled = true; stopCamera(); };
-  }, [mode]);
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => { stopCamera(); onClose(); };
 
