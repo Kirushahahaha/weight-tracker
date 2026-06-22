@@ -1,42 +1,42 @@
 # Weight Tracker
 
-Личный трекер веса, питания и тренировок. PWA — можно установить на телефон как приложение.
+A personal weight, nutrition and workout tracker. PWA — installable on your phone like a native app.
 
-## 🔗 Приложение
+## 🔗 Live app
 
 **https://weight-tracker-lake-three.vercel.app**
 
-Открой ссылку на телефоне → «Поделиться» → «На экран домой» (iPhone) или меню → «Добавить на главный экран» (Android).
+On your phone: open the link → Share → "Add to Home Screen" (iPhone) or menu → "Add to Home screen" (Android).
 
-## Возможности
+## Features
 
-- **Вес** — запись взвешиваний, цель, рост, ИМТ, график динамики
-- **Питание** — поиск продуктов, сканер штрихкода (камера + фото), счётчик КБЖУ за день
-- **Тренировки** — 8 готовых программ, анимированные GIF упражнений, таймер с отдыхом, 3 уровня сложности
-- **Облако** — вход по email, синхронизация данных между устройствами (Supabase)
-- **Офлайн** — работает без интернета, данные хранятся локально и в облаке
+- **Weight** — log weigh-ins, target weight, height, BMI, progress chart
+- **Nutrition** — product search, barcode scanner (camera + photo), daily calories/macros counter
+- **Workouts** — 8 ready-made programs, animated exercise GIFs, timer with rest periods, 3 difficulty levels
+- **Cloud** — email sign-in, data synced across devices (Supabase)
+- **Offline** — works without internet; data stored locally and in the cloud
 
-## Технологии
+## Tech stack
 
 - React (Create React App)
-- Supabase (auth + Postgres) для облачной синхронизации
-- Recharts — графики
-- ZXing + BarcodeDetector — сканер штрихкодов
-- Open Food Facts API — база продуктов
+- Supabase (auth + Postgres) for cloud sync
+- Recharts — charts
+- ZXing + BarcodeDetector — barcode scanning
+- Open Food Facts API — product database
 - PWA (manifest + service worker)
 
-## Запуск локально
+## Run locally
 
 ```bash
 npm install
 npm start
 ```
 
-Для облачной синхронизации укажи ключи Supabase в `src/supabaseClient.js`
-(или через переменные `REACT_APP_SUPABASE_URL` и `REACT_APP_SUPABASE_ANON_KEY`),
-а в Supabase выполни SQL из [`SUPABASE_SETUP.sql`](SUPABASE_SETUP.sql).
+For cloud sync, set your Supabase keys in `src/supabaseClient.js`
+(or via `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY`),
+and run the SQL from [`SUPABASE_SETUP.sql`](SUPABASE_SETUP.sql) in your Supabase project.
 
-## Деплой
+## Deploy
 
 ```bash
 npm run build
