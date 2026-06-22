@@ -1,20 +1,33 @@
 import { useState, useEffect } from 'react';
 
-// Shows a full-motion looping GIF when available; otherwise alternates between
-// two position photos to fake the movement.
+// Shows a full-motion looping GIF when available; if the GIF fails to load (or
+// none is provided), falls back to alternating two position photos so the user
+// never sees a blank white frame.
 export default function ExerciseGif({ gif, imgs, speed = 650, paused = false, className = '' }) {
   const [frame, setFrame] = useState(0);
+  const [gifFailed, setGifFailed] = useState(false);
+
+  // Reset failure state when the source changes.
+  useEffect(() => { setGifFailed(false); }, [gif]);
+
+  const useGif = gif && !gifFailed;
 
   useEffect(() => {
-    if (gif || paused || !imgs || imgs.length < 2) return;
+    if (useGif || paused || !imgs || imgs.length < 2) return;
     const id = setInterval(() => setFrame(f => (f === 0 ? 1 : 0)), speed);
     return () => clearInterval(id);
-  }, [gif, paused, imgs, speed]);
+  }, [useGif, paused, imgs, speed]);
 
-  if (gif) {
+  if (useGif) {
     return (
       <div className={`exercise-gif ${className}`}>
-        <img src={gif} alt="" className="exercise-gif-frame" draggable={false} />
+        <img
+          src={gif}
+          alt=""
+          className="exercise-gif-frame"
+          draggable={false}
+          onError={() => setGifFailed(true)}
+        />
       </div>
     );
   }
