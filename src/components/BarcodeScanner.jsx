@@ -15,13 +15,43 @@ async function fetchProduct(code) {
   };
 }
 
+async function decodeImage(img) {
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new window.BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'upc_e', 'code_128', 'code_39', 'qr_code', 'pdf417', 'data_matrix']
+      });
+      // Try full-size image first — barcode might be small in the frame
+      const bitmapFull = await createImageBitmap(img);
+      const full = await detector.detect(bitmapFull);
+      bitmapFull.close();
+      if (full.length > 0) return full[0].rawValue;
+    } catch { /* fallthrough */ }
+  }
+
+  // ZXing fallback — scale to 2000px to keep barcode readable
+  const MAX = 2000;
+  const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.round(img.naturalWidth  * scale);
+  const h = Math.round(img.naturalHeight * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width  = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+  const { BrowserMultiFormatReader } = await import('@zxing/browser');
+  const reader = new BrowserMultiFormatReader();
+  const result = await reader.decodeFromCanvas(canvas);
+  return result.getText();
+}
+
 export default function BarcodeScanner({ onResult, onClose }) {
   const videoRef   = useRef(null);
   const streamRef  = useRef(null);
   const rafRef     = useRef(null);
-  const readerRef  = useRef(null);
+  const photoRef   = useRef(null);
   const [mode, setMode]     = useState('camera'); // 'camera' | 'manual'
-  const [status, setStatus] = useState('starting'); // 'starting' | 'scanning' | 'loading' | 'error'
+  const [status, setStatus] = useState('starting');
   const [error, setError]   = useState('');
   const [manual, setManual] = useState('');
 
@@ -51,60 +81,98 @@ export default function BarcodeScanner({ onResult, onClose }) {
     }
   };
 
+  // Photo capture — самый надёжный способ на iOS
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    stopCamera();
+    setStatus('loading');
+    setError('');
+    try {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+      const code = await decodeImage(img);
+      URL.revokeObjectURL(img.src);
+      lookup(code);
+    } catch {
+      URL.revokeObjectURL(photoRef.current?.value);
+      setStatus('error');
+      setError('Штрихкод не распознан. Попробуй ещё раз или введи вручную.');
+      setMode('manual');
+      if (photoRef.current) photoRef.current.value = '';
+    }
+  };
+
   useEffect(() => {
     if (mode !== 'camera') return;
 
     let cancelled = false;
 
+    const startNative = async () => {
+      const detector = new window.BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
+      });
+      const tick = async () => {
+        if (cancelled || !videoRef.current) return;
+        const v = videoRef.current;
+        if (v.readyState === v.HAVE_ENOUGH_DATA) {
+          try {
+            const barcodes = await detector.detect(v);
+            if (barcodes.length > 0 && !cancelled) { lookup(barcodes[0].rawValue); return; }
+          } catch { /* miss */ }
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    const startZxing = async () => {
+      const { BrowserMultiFormatReader, NotFoundException } = await import('@zxing/browser');
+      if (cancelled) return;
+      const reader = new BrowserMultiFormatReader();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      let lastTick = 0;
+      const tick = async (ts) => {
+        if (cancelled || !videoRef.current) return;
+        // throttle to ~5fps — ZXing чаще не нужен, только грузит
+        if (ts - lastTick < 200) { rafRef.current = requestAnimationFrame(tick); return; }
+        lastTick = ts;
+        const v = videoRef.current;
+        if (v.readyState === v.HAVE_ENOUGH_DATA) {
+          canvas.width = v.videoWidth;
+          canvas.height = v.videoHeight;
+          ctx.drawImage(v, 0, 0);
+          try {
+            const result = await reader.decodeFromCanvas(canvas);
+            if (!cancelled) { lookup(result.getText()); return; }
+          } catch (e) {
+            if (!(e instanceof NotFoundException) && e?.name !== 'NotFoundException') { /* ignore */ }
+          }
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
     const start = async () => {
       try {
-        const { BrowserMultiFormatReader, NotFoundException } = await import('@zxing/browser');
-        if (cancelled) return;
-
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
-
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-
-        const reader = new BrowserMultiFormatReader();
-        readerRef.current = reader;
-
-        const canvas = document.createElement('canvas');
-        const ctx    = canvas.getContext('2d');
-
         setStatus('scanning');
-
-        const tick = async () => {
-          if (cancelled || !videoRef.current) return;
-          const v = videoRef.current;
-          if (v.readyState === v.HAVE_ENOUGH_DATA) {
-            canvas.width  = v.videoWidth;
-            canvas.height = v.videoHeight;
-            ctx.drawImage(v, 0, 0);
-            try {
-              const result = await reader.decodeFromCanvas(canvas);
-              if (!cancelled) lookup(result.getText());
-              return;
-            } catch (e) {
-              if (!(e instanceof NotFoundException) && e?.name !== 'NotFoundException') {
-                // ignore decode miss, keep scanning
-              }
-            }
-          }
-          rafRef.current = requestAnimationFrame(tick);
-        };
-
-        rafRef.current = requestAnimationFrame(tick);
-      } catch {
-        if (!cancelled) {
-          setStatus('error');
-          setError('Камера недоступна.');
-          setMode('manual');
+        if ('BarcodeDetector' in window) {
+          await startNative();
+        } else {
+          await startZxing();
         }
+      } catch {
+        if (!cancelled) { setStatus('error'); setError('Камера недоступна.'); setMode('manual'); }
       }
     };
 
@@ -139,9 +207,25 @@ export default function BarcodeScanner({ onResult, onClose }) {
               {status === 'starting' && <p className="barcode-hint">Запускаем камеру...</p>}
               {status === 'scanning' && <p className="barcode-hint">Наведи на штрихкод</p>}
             </div>
-            <button className="barcode-switch-btn" onClick={() => { stopCamera(); setMode('manual'); }}>
-              Ввести вручную
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px 16px' }}>
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handlePhoto}
+              />
+              <button
+                className="btn-primary"
+                onClick={() => photoRef.current?.click()}
+              >
+                Сфотографировать штрихкод
+              </button>
+              <button className="barcode-switch-btn" onClick={() => { stopCamera(); setMode('manual'); }}>
+                Ввести вручную
+              </button>
+            </div>
           </div>
         )}
 
@@ -155,6 +239,22 @@ export default function BarcodeScanner({ onResult, onClose }) {
               </svg>
             </div>
             {error && <p className="error" style={{ textAlign: 'center', marginBottom: 8 }}>{error}</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', padding: '0 16px' }}>
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handlePhoto}
+              />
+              <button
+                className="btn-primary"
+                onClick={() => photoRef.current?.click()}
+              >
+                Сфотографировать штрихкод
+              </button>
+            </div>
             <div className="barcode-manual">
               <input
                 type="number"
@@ -162,7 +262,6 @@ export default function BarcodeScanner({ onResult, onClose }) {
                 onChange={e => setManual(e.target.value)}
                 placeholder="4600000000000"
                 onKeyDown={e => e.key === 'Enter' && lookup(manual)}
-                autoFocus
               />
               <button className="btn-primary" onClick={() => lookup(manual)}>→</button>
             </div>

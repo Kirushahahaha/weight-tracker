@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncedState } from './useSyncedState';
 
 const STORAGE_KEY = 'weight_tracker_data';
 
@@ -8,19 +8,8 @@ const defaultData = {
   height: '',
 };
 
-export function useWeightData() {
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultData;
-    } catch {
-      return defaultData;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+export function useWeightData(user) {
+  const [data, setData] = useSyncedState('weight', STORAGE_KEY, defaultData, user);
 
   const addEntry = (weight, date) => {
     const entry = {

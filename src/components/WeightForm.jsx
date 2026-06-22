@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function pad(v) { return String(v).padStart(2, '0'); }
 
@@ -21,13 +21,16 @@ function isValidDate(day, month, year) {
   return date <= new Date();
 }
 
-export default function WeightForm({ onAdd, entries }) {
+export default function WeightForm({ onAdd, entries, height, onSetHeight }) {
   const init = todayParts();
   const [weight, setWeight] = useState('');
+  const [heightInput, setHeightInput] = useState('');
   const [day, setDay]     = useState(init.day);
   const [month, setMonth] = useState(init.month);
   const [year, setYear]   = useState(init.year);
   const [error, setError] = useState('');
+
+  useEffect(() => { if (height) setHeightInput(String(height)); }, [height]);
 
   const monthRef = { current: null };
   const yearRef  = { current: null };
@@ -40,6 +43,7 @@ export default function WeightForm({ onAdd, entries }) {
     const isoDate = `${expandYear(year)}-${pad(month)}-${pad(day)}`;
     if (entries && entries.some(e => e.date === isoDate)) { setError('Запись на эту дату уже существует'); return; }
     onAdd(w, isoDate);
+    if (heightInput && onSetHeight) onSetHeight(heightInput);
     setWeight(''); setError('');
     const t = todayParts();
     setDay(t.day); setMonth(t.month); setYear(t.year);
@@ -55,6 +59,13 @@ export default function WeightForm({ onAdd, entries }) {
             <input type="number" step="0.1" min="1" max="500" value={weight}
               onChange={e => setWeight(e.target.value)} placeholder="75.5" />
           </div>
+          <div className="field">
+            <label>Рост (см)</label>
+            <input type="number" step="1" min="50" max="250" value={heightInput}
+              onChange={e => setHeightInput(e.target.value)} placeholder="175" />
+          </div>
+        </div>
+        <div className="form-row">
           <div className="field">
             <label>Дата</label>
             <div className="date-fields">

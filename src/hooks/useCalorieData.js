@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncedState } from './useSyncedState';
 
 const STORAGE_KEY = 'calorie_tracker_data';
 
@@ -7,19 +7,8 @@ const defaultData = {
   dailyGoal: 2000,
 };
 
-export function useCalorieData() {
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultData;
-    } catch {
-      return defaultData;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+export function useCalorieData(user) {
+  const [data, setData] = useSyncedState('calories', STORAGE_KEY, defaultData, user);
 
   const addMeal = (product, grams, date) => {
     const kcalPer100 = product.kcal_per_100 || 0;
