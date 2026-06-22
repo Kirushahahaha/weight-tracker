@@ -1,4 +1,4 @@
-const CACHE = 'wt-v12';
+const CACHE = 'wt-v13';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -17,9 +17,24 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // API запросы — только сеть, без кеша
-  if (url.hostname.includes('openfoodfacts')) return;
+  // Supabase и Open Food Facts — только сеть, без кеша.
+  if (url.hostname.includes('openfoodfacts') || url.hostname.includes('supabase')) return;
 
+  // Навигация (главный документ) — network-first: всегда свежая версия при
+  // наличии сети, кеш только как офлайн-фолбэк. Убирает «застревание» на старом.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(e.request).then(r => r || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Остальное (статика, картинки, GIF) — stale-while-revalidate.
   e.respondWith(
     caches.open(CACHE).then(async cache => {
       const cached = await cache.match(e.request);
